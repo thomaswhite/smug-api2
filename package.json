@@ -1,0 +1,40 @@
+{
+  "name": "smug-api2",
+  "version": "0.0.1",
+  "description": "SmugMug API 2.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test/tests.js",
+    "lint": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thomaswhite/smug-api2"
+  },
+  "author": "thomaswhite",
+  "keywords": [
+    "smug",
+    "mug",
+    "api",
+    "smugmug",
+    "2.0"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "client-oauth": "^0.1.2",
+    "dotenv": "^6.0.0",
+    "dotenv-expand": "^4.2.0",
+    "lodash": "^4.11.1",
+    "oauth": "^0.9.14",
+    "object-assign": "^4.1.1",
+    "request": "^2.87.0",
+    "request-promise-native": "^1.0.5"
+  },
+  "devDependencies": {
+    "code": "^5.2.0",
+    "lab": "^15.5.0",
+    "should": "^13.2.1",
+    "standard": "^11.0.1",
+    "tape": "^4.9.0"
+  }
+}
