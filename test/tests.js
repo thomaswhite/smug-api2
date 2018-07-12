@@ -13,6 +13,7 @@ const should = require('should')
 const Lab = require('lab')
 const lab = exports.lab = Lab.script()
 const it = lab.test
+const test = lab.text
 const describe = lab.experiment
 
 const api = {
@@ -33,6 +34,10 @@ const api = {
   WebUriLookup: '/api/v2!weburilookup',
   GuideBase: '/api/v2/guide'
 }
+
+const api_keys = [
+  'UserBase', 'AlbumBase', 'AlbumTemplateBase', 'ThemeBase', 'TemplateBase', 'ImageBase', 'WatermarkBase', 'PrintmarkBase', 'FolderBase', 'CommentBase', 'PageBase', 'StatusBase', 'DownloadBase', 'NicknameUrlPathLookup', 'WebUriLookup', 'GuideBase'
+]
 
 // const beforeEach = lab.beforeEach
 
@@ -81,7 +86,7 @@ describe('smug-api2 unit tests', function () {
         })
     })
 
-    it('method .getAPI should URLs as JSON file', function () {
+    it('method .getAPI should save URLs as JSON file', function () {
       const FilePath = path.join(__dirname, '../lib/api-urls.json')
 
       fs.remove(path.join(FilePath), function () {})
@@ -91,6 +96,11 @@ describe('smug-api2 unit tests', function () {
             .then(function (data2) {
               data2.should.be.an.instanceOf(Object)
                 .and.eql(api)
+
+              for (let i = 1; i < api_keys.length; i++) {
+                data2.should.have.key(api_keys[i], 'check for key' + api_keys[i])
+              }
+
             })
             .catch(function (err) {
               should.not.exist(err)
