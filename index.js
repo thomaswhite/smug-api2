@@ -1,21 +1,24 @@
-// require('request')
-const rq = require('request-promise-native')
-// const util = require('util')
-const fs = require('fs-extra')
-const path = require('path')
-const API = require('./lib/get-api.js')
 
 // const objectAssign = require('object-assign');
 
 module.exports = function (options) {
   'use strict'
-  var config = {
+
+  const rq = require('request-promise-native')
+// const util = require('util')
+  const fs = require('fs-extra')
+  const path = require('path')
+  const get_api_url = require('./lib/get-api.js')(options)
+
+  //  rq.debug = true
+
+  let config = {
     username: '',
     api_key: ''
   }
 
-  var api = {}
-  var Parameters = {
+  let api = {}
+  let Parameters = {
     start: 1,
     count: 200
   }
@@ -27,18 +30,11 @@ module.exports = function (options) {
     'Response': ' application/json'
   }
 
-  if (options.username) {
-    config.username = options.username
-  }
-  if (options.api_key) {
-    config.api_key = options.api_key
-  }
-
   function makeRequestOptions (base, params) {
     const apiKey = {APIKey: config.api_key}
 
-    var url
-    var queryParamas = Object.assign({}, apiKey, Parameters, params)
+    let url
+    let queryParamas = Object.assign({}, apiKey, Parameters, params)
 
     switch (base) {
       case 'get-api':
@@ -69,7 +65,7 @@ module.exports = function (options) {
           return body.Response
         } else {
           const URLs = body.Response.Uris
-          for (var i in URLs) {
+          for (let i in URLs) {
             api[i] = URLs[i].Uri
           }
           return api
@@ -108,8 +104,35 @@ module.exports = function (options) {
       })
   }
 
+  function User (oParam, oExtraMethods) {
+    return rq(get_api_url.getUrl('User', oParam, oExtraMethods))
+      .then(function (body) {
+        //let User = body.Response.User
+        //User.Node = User.Uris.Node.split('/')[4]
+        return body
+      })
+      .catch(function (err) {
+        throw err
+      })
+  }
+
+  function Node (oParam, oExtraMethods) {
+    return rq(get_api_url.getUrl('Node', oParam, oExtraMethods))
+      .then(function (body) {
+        //let User = body.Response.User
+        //User.Node = User.Uris.Node.split('/')[4]
+        return body.Response.Node
+      })
+      .catch(function (err) {
+        throw err
+      })
+  }
+
+
   return {
     getAPI: getAPI,
-    connect: connect
+    connect: connect,
+    user: User,
+    node: Node
   }
 }
