@@ -1,4 +1,3 @@
-
 // const objectAssign = require('object-assign');
 
 module.exports = function (options) {
@@ -104,20 +103,26 @@ module.exports = function (options) {
       })
   }
 
-  function User (oParam, oExtraMethods) {
-    return rq(get_api_url.getUrl('User', oParam, oExtraMethods))
+  function User (method, oParam, oExtraMethods) {
+    return rq(get_api_url.getUrl(!method ? 'User' : 'User' + '/' + method, oParam, oExtraMethods))
       .then(function (body) {
-        //let User = body.Response.User
-        //User.Node = User.Uris.Node.split('/')[4]
-        return body
+        //       let User = body.Response.User
+        //       User.NodeID = User.Uris.Node.Uri.split('/')[4]
+        //       delete User.Uris
+        return body.Response
       })
       .catch(function (err) {
         throw err
       })
   }
 
-  function Node (oParam, oExtraMethods) {
-    return rq(get_api_url.getUrl('Node', oParam, oExtraMethods))
+  function Node (method, oParam, oExtraMethods) {
+    let type = 'Node'
+    if (method) {
+      type += '/' + method
+    }
+    let oRQ = get_api_url.getUrl(type, oParam, oExtraMethods)
+    return rq(oRQ)
       .then(function (body) {
         //let User = body.Response.User
         //User.Node = User.Uris.Node.split('/')[4]
@@ -128,11 +133,25 @@ module.exports = function (options) {
       })
   }
 
+  function Album (method, oParam, oExtraMethods) {
+    let type = 'Album'
+    if (method) {
+      type += '/' + method
+    }
+    return rq(get_api_url.getUrl(type, oParam, oExtraMethods))
+      .then(function (body) {
+        return body.Response
+      })
+      .catch(function (err) {
+        throw err
+      })
+  }
 
   return {
     getAPI: getAPI,
     connect: connect,
     user: User,
-    node: Node
+    node: Node,
+    album: Album
   }
 }
