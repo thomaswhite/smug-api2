@@ -1,27 +1,30 @@
 const util = require('util')
 const creds = require('../lib/credentials.js')()
 const smug = require('../index.js')(creds)
+const fs = require('fs-extra')
+const path = require('path')
 
 // const get_api_url = require('../lib/get-api.js')(creds)
 // console.info( "User", get_api_url.getUrl('Node', {NodeID:'SgX7vW'}), "\n" );
 
-/*
-smug.user('Albums', {}, {}) // , _filteruri: null  _filter: null
+smug.user('Albums', {}, {}) // , _filteruri: null,  _filter: null
   .then(function (data) {
-    console.log(util.inspect(data, {showHidden: false, depth: null}))
+    data.Album.forEach(function (o) {
+      console.log('%s %s, %i images', o.Name.padEnd(20), o.UrlPath.padEnd(30), o.ImageCount.toString().padStart(4))
+    })
+    return [fs.outputJson(path.join(__dirname, '../data/albums.json'), data.Album, {spaces: 2}), data.Album]
+    //console.log(util.inspect(data, {showHidden: false, depth: null}))
 //    return smug.node('ChildNodes', {NodeID: data.NodeID})
   })
-
-  //    .then(function (data) {
-  //      rootFolders = data
-  //      console.log(util.inspect(data, {showHidden: false, depth: null}))
-  //    })
+  .then(function (aData) {
+    console.log(util.inspect(aData[1], {showHidden: false, depth: null}))
+  })
 
   .catch(function (err) {
     console.log(err)
   })
-*/
 
+/*
 smug.album('AlbumImages', {AlbumKey: 'Fg96T2'}, {}) // _filteruri:null   _filteruri:'AlbumImages'   _filter: 'Name,NickName,WebUri',  : 'Node',
   .then(function (data) {
     console.log(util.inspect(data, {showHidden: false, depth: null}))
