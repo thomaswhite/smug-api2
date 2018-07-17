@@ -3,8 +3,11 @@
 module.exports = function (options) {
   'use strict'
 
-  const rq = require('request-promise-native')
-// const util = require('util')
+  require('any-promise/register/q')
+  const Q = require('q')
+  const rq = require('request-promise-any')
+
+  const util = require('util')
   const fs = require('fs-extra')
   const path = require('path')
   const get_api_url = require('./lib/get-api.js')(options)
@@ -140,7 +143,36 @@ module.exports = function (options) {
     }
     return rq(get_api_url.getUrl(type, oParam, oExtraMethods))
       .then(function (body) {
-        return body.Response
+        return body.Response.AlbumImage
+      })
+      .catch(function (err) {
+        throw err
+      })
+  }
+
+  function userAlbums () {
+    return User('Albums')
+      .then(function (aAlbums) {
+        let aRq = []
+        aAlbums.Album.forEach(function (o) {
+          aRq.push(
+            Album('AlbumImages', o)
+              .then(function (aImages) {
+//              aImages.forEach(function (f) {
+//                console.log(f.FileName)
+//              })
+                console.log('%s, %i images downloaded', o.UrlPath, aImages.length)
+                // return [fs.outputJson(path.join(__dirname, '../data/albums.json'), data.Album, {spaces: 2}), data.Album]
+                return {images: aImages, album: o}
+              })
+          )
+        })
+
+        return Q.all(aRq)
+      })
+      .then(function (results) {
+        console.log('Done', results[0].length)
+        return results
       })
       .catch(function (err) {
         throw err
@@ -152,6 +184,7 @@ module.exports = function (options) {
     connect: connect,
     user: User,
     node: Node,
-    album: Album
+    album: Album,
+    userAlbums: userAlbums
   }
 }
