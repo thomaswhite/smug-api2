@@ -1,11 +1,10 @@
 const creds = require('../lib/credentials.js')()
-const smug = require('../index.js')(creds)
 const util = require('util')
+const ApiURL = require('../lib/get-api.js')(creds)
 
-smug.getAPI({save: true}) //
-  .then(function (data) {
-    console.log(util.inspect(data, {showHidden: false, depth: null}))
-  })
-  .catch(function (err) {
-    console.log(err)
-  })
+console.info('User/Profile\n', ApiURL.getUrl('User/Profile'), '\n')
+console.info('Albumn', ApiURL.getUrl('Album', {AlbumKey: 'SJT3DX'}), '\n')
+console.info('Album/AlbumImages', util.inspect(ApiURL.getUrl('Album/AlbumImages', {
+  AlbumKey: 'SJT3DX',
+  NodeID: 'ZsfFs'
+}), {showHidden: false, depth: null}), '\n')

@@ -7,11 +7,13 @@ module.exports = function (options) {
   const Q = require('q')
   const rq = require('request-promise-any')
 
-  const util = require('util')
+  //  const util = require('util')
   const fs = require('fs-extra')
   const path = require('path')
-  const get_api_url = require('./lib/get-api.js')(options)
-
+  const ApiURL = require('./lib/get-api.js')(options)
+  const Tags = require('./lib/tags.js')
+  //  const _ = require('lodash')
+  const deepmerge = require('deepmerge')
   //  rq.debug = true
 
   let config = {
@@ -30,6 +32,10 @@ module.exports = function (options) {
     'User-Agent': 'request',
     'Accept': ' application/json',
     'Response': ' application/json'
+  }
+
+  function isNotObject (obj) {
+    return Object.keys(obj).length > 0
   }
 
   function makeRequestOptions (base, params) {
@@ -77,7 +83,7 @@ module.exports = function (options) {
         if (options && options.save === true) {
           const FilePath = path.join(__dirname, 'lib/api-urls.json')
           fs.outputJson(FilePath, URLs)
-            .then(function (data) {
+            .then(function () {
               console.info(FilePath + ' has been saved')
             })
             .catch(function (err) {
@@ -107,7 +113,7 @@ module.exports = function (options) {
   }
 
   function User (method, oParam, oExtraMethods) {
-    return rq(get_api_url.getUrl(!method ? 'User' : 'User' + '/' + method, oParam, oExtraMethods))
+    return rq(ApiURL.getUrl(!method ? 'User' : 'User' + '/' + method, oParam, oExtraMethods))
       .then(function (body) {
         //       let User = body.Response.User
         //       User.NodeID = User.Uris.Node.Uri.split('/')[4]
@@ -121,14 +127,12 @@ module.exports = function (options) {
 
   function Node (method, oParam, oExtraMethods) {
     let type = 'Node'
-    if (method) {
-      type += '/' + method
-    }
-    let oRQ = get_api_url.getUrl(type, oParam, oExtraMethods)
+    if (method) { type += '/' + method }
+    let oRQ = ApiURL.getUrl(type, oParam, oExtraMethods)
     return rq(oRQ)
       .then(function (body) {
-        //let User = body.Response.User
-        //User.Node = User.Uris.Node.split('/')[4]
+        // let User = body.Response.User
+        // User.Node = User.Uris.Node.split('/')[4]
         return body.Response.Node
       })
       .catch(function (err) {
@@ -138,10 +142,8 @@ module.exports = function (options) {
 
   function Album (method, oParam, oExtraMethods) {
     let type = 'Album'
-    if (method) {
-      type += '/' + method
-    }
-    return rq(get_api_url.getUrl(type, oParam, oExtraMethods))
+    if (method) { type += '/' + method }
+    return rq(ApiURL.getUrl(type, oParam, oExtraMethods))
       .then(function (body) {
         return body.Response.AlbumImage
       })
@@ -150,30 +152,83 @@ module.exports = function (options) {
       })
   }
 
+  function ProcessImage (img, album) {
+    let img2 = {Albums: {}}
+    img2 = deepmerge(img2, img)
+    img2.Albums[album.AlbumKey] = album.UrlPath
+    delete img2.FileName
+    return img2
+  }
+
+  function ImageURLPattern (img) {
+    return img.ThumbnailUrl.split(img.ImageKey)
+      .join('$ImageKey')
+      .replace(img.FileName.split('.')[0], '$fileNameBase')
+      .replace('/Th', '/$Size')
+      .replace('-Th', '-$Size')
+  }
+
   function userAlbums () {
+    let oImages = {}
+    let KeyWords = {Albums: {}, Images: {}}
+    let AllAlbums
     return User('Albums')
+
       .then(function (aAlbums) {
         let aRq = []
-        aAlbums.Album.forEach(function (o) {
+        AllAlbums = deepmerge({}, aAlbums.Album)
+        aAlbums.Album.forEach(function (album) {
+          let AlbumTags = Tags.process_album_tags(album)
+          KeyWords.Albums[album.AlbumKey] = AlbumTags
+          album.tags = AlbumTags
           aRq.push(
-            Album('AlbumImages', o)
+            Album('AlbumImages', album)
               .then(function (aImages) {
-//              aImages.forEach(function (f) {
-//                console.log(f.FileName)
-//              })
-                console.log('%s, %i images downloaded', o.UrlPath, aImages.length)
-                // return [fs.outputJson(path.join(__dirname, '../data/albums.json'), data.Album, {spaces: 2}), data.Album]
-                return {images: aImages, album: o}
+                let sPath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
+                aImages.forEach(function (img) {
+                  img.urlPattern = ImageURLPattern(img)
+
+                  oImages[img.FileName] = oImages[img.FileName] || {}
+                  oImages[img.FileName] = deepmerge(oImages[img.FileName], ProcessImage(img, album))
+
+                  const imageTags = Tags.process_image_tags(img)
+                  KeyWords.Images = deepmerge(KeyWords.Images, imageTags)
+                  Tags.sumarise_albumTags(AlbumTags, imageTags)
+                })
+                album.Images = aImages
+                return fs.outputJson(sPath, album, {spaces: 2})
+                  .then(function () {
+                    console.log('%s images in %s', aImages.length.toString().padStart(5), sPath)
+                    return {album: album, path: sPath}
+                  })
               })
           )
         })
-
         return Q.all(aRq)
       })
       .then(function (results) {
-        console.log('Done', results[0].length)
-        return results
+        let imagesPath = path.join(__dirname, 'data', 'Images.json')
+        return fs.outputJson(imagesPath, oImages, {spaces: 2})
+          .then(function () {
+            const filePath = path.join(__dirname, 'data', 'KeyWords.json')
+            console.log('%s saved', imagesPath)
+            return fs.outputJson(filePath, KeyWords, {spaces: 2})
+              .then(function () {
+                console.log('%s saved', filePath)
+              })
+          })
+          .then(function () {
+            const filePath = path.join(__dirname, 'data', 'Albums.json')
+            return fs.outputJson(filePath, AllAlbums, {spaces: 2})
+              .then(function () {
+                console.log('%s saved', filePath)
+              })
+          })
+          .then(function () {
+            return [results, oImages, AllAlbums]
+          })
       })
+
       .catch(function (err) {
         throw err
       })
