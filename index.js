@@ -112,55 +112,69 @@ module.exports = function (options) {
       })
   }
 
-  function User (method, oParam, oExtraMethods) {
-    return rq(ApiURL.getUrl(!method ? 'User' : 'User' + '/' + method, oParam, oExtraMethods))
+  function SaveJSON (oData, dir, filename) {
+    const filePath = path.join(__dirname, dir, filename)
+    return fs.outputJson(filePath, oData, {spaces: 2})
+      .then(function () {
+        console.log('%s saved', filePath)
+      })
+  }
+
+  /* ======================================================== */
+
+  function RequestSmug (RequestParameters, returnBody) {
+    return rq(RequestParameters)
       .then(function (body) {
-        //       let User = body.Response.User
-        //       User.NodeID = User.Uris.Node.Uri.split('/')[4]
-        //       delete User.Uris
-        return body.Response
+        let data = body.Response.Locator
+          ? body.Response[body.Response.Locator]
+          : body.Response
+
+        if (data.Keywords && typeof data.Keywords !== 'string') {
+          data.Keywords = data.Keywords.join(';')
+        }
+        if (data.KeywordArray && data.KeywordArray.length) {
+          if (!data.Keywords) {
+            data.Keywords = data.KeywordArray.join(';')
+          }
+          delete data.KeywordArray
+        }
+        return returnBody === true ? body : data
       })
       .catch(function (err) {
         throw err
       })
   }
 
-  function Node (method, oParam, oExtraMethods) {
-    let type = 'Node'
-    if (method) { type += '/' + method }
-    let oRQ = ApiURL.getUrl(type, oParam, oExtraMethods)
-    return rq(oRQ)
-      .then(function (body) {
-        // let User = body.Response.User
-        // User.Node = User.Uris.Node.split('/')[4]
-        return body.Response.Node
-      })
-      .catch(function (err) {
-        throw err
-      })
+  function User (oParam, oExtraMethods, method) {
+    return RequestSmug(ApiURL.RequestParam('User', method, oParam, oExtraMethods))
   }
 
-  function Album (method, oParam, oExtraMethods) {
-    let type = 'Album'
-    if (method) { type += '/' + method }
-    return rq(ApiURL.getUrl(type, oParam, oExtraMethods))
-      .then(function (body) {
-        return body.Response.AlbumImage
-      })
-      .catch(function (err) {
-        throw err
-      })
+  function Node (oParam, oExtraMethods, method) {
+    return RequestSmug(ApiURL.RequestParam('Node', method, oParam, oExtraMethods))
+  }
+
+  function Album (oParam, oExtraMethods, method) {
+    return RequestSmug(ApiURL.RequestParam('Album', method, oParam, oExtraMethods))
+  }
+
+  function Image (oParam, oExtraMethods, method) {
+    return RequestSmug(ApiURL.RequestParam('Image', method, oParam, oExtraMethods))
   }
 
   function ProcessImage (img, album) {
     let img2 = {Albums: {}}
     img2 = deepmerge(img2, img)
-    img2.Albums[album.AlbumKey] = album.UrlPath
-    delete img2.FileName
+    if (!img2.Albums[album.AlbumKey]) {
+      img2.Albums[album.AlbumKey] = []
+    }
+    img2.Albums[album.AlbumKey] = {UrlPath: album.UrlPath, Movable: img2.Movable}
+    img2.urlPattern = ImageURLPattern(img)
+    delete img2.ImageKey
     return img2
   }
 
   function ImageURLPattern (img) {
+    // https://photos.smugmug.com/photos/i-g9RGWPS/0/61e9a465/Th/i-g9RGWPS-Th.jpg"
     return img.ThumbnailUrl.split(img.ImageKey)
       .join('$ImageKey')
       .replace(img.FileName.split('.')[0], '$fileNameBase')
@@ -168,34 +182,41 @@ module.exports = function (options) {
       .replace('-Th', '-$Size')
   }
 
-  function userAlbums () {
-    let oImages = {}
+  function AlbumsAndImages (oParam, oExtraMethods) {
+    let oImages = {IDs: {}, FileNames: {}}
     let KeyWords = {Albums: {}, Images: {}}
-    let AllAlbums
-    return User('Albums')
-
+    let AllAlbums = {}
+    return User(oParam, oExtraMethods, 'Albums')
+      .then(function (aAlbums) {
+        aAlbums.forEach(function (album) {
+          KeyWords.Albums[album.AlbumKey] = album.tags = Tags.album(album)
+          AllAlbums[album.AlbumKey] = album
+        })
+        return aAlbums
+      })
       .then(function (aAlbums) {
         let aRq = []
-        AllAlbums = deepmerge({}, aAlbums.Album)
-        aAlbums.Album.forEach(function (album) {
-          let AlbumTags = Tags.process_album_tags(album)
-          KeyWords.Albums[album.AlbumKey] = AlbumTags
-          album.tags = AlbumTags
+        aAlbums.forEach(function (album) {
+          album.Images = {}
           aRq.push(
-            Album('AlbumImages', album)
+            Album(album, {}, 'AlbumImages')
               .then(function (aImages) {
-                let sPath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
                 aImages.forEach(function (img) {
-                  img.urlPattern = ImageURLPattern(img)
 
-                  oImages[img.FileName] = oImages[img.FileName] || {}
-                  oImages[img.FileName] = deepmerge(oImages[img.FileName], ProcessImage(img, album))
+                  oImages.IDs[img.ImageKey] = oImages.IDs[img.ImageKey] || {}
+                  oImages.IDs[img.ImageKey] = deepmerge(oImages.IDs[img.ImageKey], ProcessImage(img, album))
+                  oImages.FileNames[img.FileName] = img.ImageKey
 
-                  const imageTags = Tags.process_image_tags(img)
+                  const imageTags = Tags.image(img)
                   KeyWords.Images = deepmerge(KeyWords.Images, imageTags)
-                  Tags.sumarise_albumTags(AlbumTags, imageTags)
+
+                  album.tags = Tags.SumariseAlbum(album.tags, imageTags)
+                  album.Images[img.ImageKey] = img.FileName
+
                 })
-                album.Images = aImages
+                // album.Images = aImages
+
+                let sPath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
                 return fs.outputJson(sPath, album, {spaces: 2})
                   .then(function () {
                     console.log('%s images in %s', aImages.length.toString().padStart(5), sPath)
@@ -206,27 +227,17 @@ module.exports = function (options) {
         })
         return Q.all(aRq)
       })
-      .then(function (results) {
-        let imagesPath = path.join(__dirname, 'data', 'Images.json')
-        return fs.outputJson(imagesPath, oImages, {spaces: 2})
-          .then(function () {
-            const filePath = path.join(__dirname, 'data', 'KeyWords.json')
-            console.log('%s saved', imagesPath)
-            return fs.outputJson(filePath, KeyWords, {spaces: 2})
-              .then(function () {
-                console.log('%s saved', filePath)
-              })
-          })
-          .then(function () {
-            const filePath = path.join(__dirname, 'data', 'Albums.json')
-            return fs.outputJson(filePath, AllAlbums, {spaces: 2})
-              .then(function () {
-                console.log('%s saved', filePath)
-              })
-          })
-          .then(function () {
-            return [results, oImages, AllAlbums]
-          })
+      .then(function () {
+        return SaveJSON(oImages, 'data', 'Images.json')
+      })
+      .then(function () {
+        SaveJSON(KeyWords, 'data', 'KeyWords.json')
+      })
+      .then(function () {
+        SaveJSON(AllAlbums, 'data', 'Albums.json')
+      })
+      .then(function () {
+        console.log('AlbumsAndImages - all saved.')
       })
 
       .catch(function (err) {
@@ -240,6 +251,7 @@ module.exports = function (options) {
     user: User,
     node: Node,
     album: Album,
-    userAlbums: userAlbums
+    image: Image,
+    AlbumsAndImages: AlbumsAndImages
   }
 }

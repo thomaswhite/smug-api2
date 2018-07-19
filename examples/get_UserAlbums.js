@@ -1,9 +1,9 @@
 const creds = require('../lib/credentials.js')()
 const smug = require('../index.js')(creds)
 
-smug.user('Albums', {}, {}) // , _filteruri: null,  _filter: null
+smug.user({}, {}, 'Albums') // , _filteruri: null,  _filter: null
   .then(function (data) {
-    data.Album.forEach(function (o) {
+    data.forEach(function (o) {
       console.log('%s %s, %i images', o.Name.padEnd(35), o.UrlPath.padEnd(30), o.ImageCount.toString().padStart(4))
     })
     console.log(data)

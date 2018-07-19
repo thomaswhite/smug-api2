@@ -4,7 +4,7 @@ const smug = require('../index.js')(creds)
 
 smug.user()
   .then(function (data) {
-    console.log(util.inspect(data.User, {showHidden: false, depth: null}))
+    console.log(util.inspect(data, {showHidden: false, depth: null}))
   })
   .catch(function (err) {
     console.log(err)
