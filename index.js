@@ -5,7 +5,7 @@ module.exports = function (options) {
 
   require('any-promise/register/q')
   const Q = require('q')
-  const rq = require('request-promise-any')
+  const rq = require('request-promise-any')    //  https://www.npmjs.com/package/request-promise
 
   //  const util = require('util')
   const fs = require('fs-extra')
@@ -14,12 +14,12 @@ module.exports = function (options) {
   const Tags = require('./lib/tags.js')
   const Images = require('./lib/images.js')
   //  const _ = require('lodash')
-  const deepmerge = require('deepmerge')
+  // const deepmerge = require('deepmerge')
   //  rq.debug = true
 
   let config = {
     username: '',
-    api_key: ''
+    app_key: ''
   }
 
   let api = {}
@@ -40,7 +40,7 @@ module.exports = function (options) {
   }
 
   function makeRequestOptions (base, params) {
-    const apiKey = {APIKey: config.api_key}
+    const apiKey = {APIKey: config.app_key}
 
     let url
     let queryParamas = Object.assign({}, apiKey, Parameters, params)
@@ -124,6 +124,8 @@ module.exports = function (options) {
   }
 
   function RequestSmug (RequestParameters, returnBody) {
+    // resolveWithFullResponse: true
+    // simple: false
     return rq(RequestParameters)
       .then(function (body) {
         let data = body.Response.Locator
@@ -146,30 +148,30 @@ module.exports = function (options) {
       })
   }
 
-  function User (oParam, oExtraMethods, method) {
-    return RequestSmug(ApiURL.RequestParam('User', method, oParam, oExtraMethods))
+  function User (oParam, oExtraMethods, method, postPayload) {
+    return RequestSmug(ApiURL.RequestParam('User', method, oParam, oExtraMethods, postPayload))
   }
 
-  function Node (oParam, oExtraMethods, method) {
-    return RequestSmug(ApiURL.RequestParam('Node', method, oParam, oExtraMethods))
+  function Node (oParam, oExtraMethods, method, postPayload) {
+    return RequestSmug(ApiURL.RequestParam('Node', method, oParam, oExtraMethods, postPayload))
   }
 
-  function Album (oParam, oExtraMethods, method) {
-    return RequestSmug(ApiURL.RequestParam('Album', method, oParam, oExtraMethods))
+  function Album (oParam, oExtraMethods, method, postPayload) {
+    return RequestSmug(ApiURL.RequestParam('Album', method, oParam, oExtraMethods, postPayload))
   }
 
-  function Image (oParam, oExtraMethods, method) {
-    return RequestSmug(ApiURL.RequestParam('Image', method, oParam, oExtraMethods))
+  function Image (oParam, oExtraMethods, method, postPayload) {
+    return RequestSmug(ApiURL.RequestParam('Image', method, oParam, oExtraMethods, postPayload))
   }
 
-  function AlbumsAndImages (oParam, oExtraMethods) {
+  function AlbumsAndImages (oParam, oExtraMethods, postPayload) {
     let oImages = {IDs: {}, FileNames: {}}
     let KeyWords = {Albums: {}, Images: {}}
     let AllAlbums = {}
-    return User(oParam, oExtraMethods, 'Albums')
+    return User(oParam, oExtraMethods, 'Albums', postPayload)
       .then(function (aAlbums) {
         aAlbums.forEach(function (album) {
-          KeyWords.Albums[album.AlbumKey] = album.tags = Tags.album(album)
+          Tags.AddAlbumTags(album, KeyWords)
           AllAlbums[album.AlbumKey] = album
         })
         return aAlbums
@@ -205,44 +207,46 @@ module.exports = function (options) {
         let aRq = []
         aAlbums.forEach(function (album) {
           album.Images = {}
+          album.filePath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
           aRq.push(
             Album(album, {}, 'AlbumImages')
               .then(function (aImages) {
                 aImages.forEach(function (img) {
-
-                  oImages.IDs[img.ImageKey] = oImages.IDs[img.ImageKey] || {}
-                  oImages.IDs[img.ImageKey] = deepmerge(oImages.IDs[img.ImageKey], Images.Process(img, album))
-                  oImages.FileNames[img.FileName] = img.ImageKey
-
-                  // Add to Tags
-                  const imageTags = Tags.image(img)
-                  KeyWords.Images = deepmerge(KeyWords.Images, imageTags)
-
-                  // Add to the album
-                  album.tags = Tags.SumariseAlbum(album.tags, imageTags)
-                  album.Images[img.ImageKey] = img.FileName
-
+                  Images.AddAlbum(img, album)
+                  Images.Add(img, oImages)
+                  Tags.AddImageTagsToAlbum(img, album, KeyWords)
                 })
-                // album.Images = aImages
-
-                album.filePath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
                 return fs.outputJson(album.filePath, album, {spaces: 2})
                   .then(function () {
                     console.log('%s images in %s', aImages.length.toString().padStart(5), album.filePath,)
                     return {album: album, path: album.filePath, images: aImages}
                   })
               })
+
           )
 
         })
         return Q.all(aRq)
-
       })
 
-      .then(function (data, a, b) {
+      .then(function (data) {
+        let aRq = []
+        data.forEach(function (AlbumData) {
+          AlbumData.images.forEach(function (img) {
+            // add image
+            // process image tags
+            // process folder tags
+          })
+          // save album
+        })
+        return data
+      })
+
+      .then(function (data) {
         return SaveJSON(oImages, 'data', 'Images.json')
       })
       .then(function () {
+        Tags.OrderAlbumTags(KeyWords)
         SaveJSON(KeyWords, 'data', 'KeyWords.json')
       })
       .then(function () {

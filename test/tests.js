@@ -35,7 +35,7 @@ const api = {
   GuideBase: '/api/v2/guide'
 }
 
-const api_keys = [
+const app_keys = [
   'UserBase', 'AlbumBase', 'AlbumTemplateBase', 'ThemeBase', 'TemplateBase', 'ImageBase', 'WatermarkBase', 'PrintmarkBase', 'FolderBase', 'CommentBase', 'PageBase', 'StatusBase', 'DownloadBase', 'NicknameUrlPathLookup', 'WebUriLookup', 'GuideBase'
 ]
 
@@ -97,8 +97,8 @@ describe('smug-api2 unit tests', function () {
               data2.should.be.an.instanceOf(Object)
                 .and.eql(api)
 
-              for (let i = 1; i < api_keys.length; i++) {
-                data2.should.have.key(api_keys[i], 'check for key' + api_keys[i])
+              for (let i = 1; i < app_keys.length; i++) {
+                data2.should.have.key(app_keys[i], 'check for key' + app_keys[i])
               }
 
             })
