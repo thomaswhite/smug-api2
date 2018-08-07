@@ -1,6 +1,6 @@
 const util = require('util')
-const creds = require('../lib/credentials.js')()
-const smug = require('../index.js')(creds)
+const creds = require('../../lib/credentials.js')()
+const smug = require('../../index.js')(creds)
 
 smug.node('ChildNodes', {NodeID: 'SgX7vW'}, {})
   .then(function (data) {
