@@ -5,7 +5,7 @@ module.exports = function (options) {
 
   require('any-promise/register/q')
   const Q = require('q')
-  const rq = require('request-promise-any')    //  https://www.npmjs.com/package/request-promise
+  const rq = require('request-promise-any')  //  https://www.npmjs.com/package/request-promise
 
   //  const util = require('util')
   const fs = require('fs-extra')
@@ -168,6 +168,16 @@ module.exports = function (options) {
     let oImages = {IDs: {}, FileNames: {}}
     let KeyWords = {Albums: {}, Images: {}}
     let AllAlbums = {}
+    /*
+        return fs.readJson(path.join(__dirname, 'data', 'Albums.json'))
+          .then(function (savedAlbum) {
+            return savedAlbum
+          })
+          .catch(function (err) {
+            return null
+          })
+
+    */
     return User(oParam, oExtraMethods, 'Albums', postPayload)
       .then(function (aAlbums) {
         aAlbums.forEach(function (album) {
@@ -178,8 +188,6 @@ module.exports = function (options) {
       })
 
       /*
-
-
             .then(function (aAlbums) {
             let aRq = []
             aAlbums.forEach(function (fresh_album) {
@@ -198,15 +206,11 @@ module.exports = function (options) {
                     Album(album, {}, 'AlbumImages')
                       .then(function (aImages) {
                         aImages.forEach(function (img) {
-
-
-
        */
 
       .then(function (aAlbums) {
         let aRq = []
         aAlbums.forEach(function (album) {
-          album.Images = {}
           album.filePath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
           aRq.push(
             Album(album, {}, 'AlbumImages')
@@ -218,13 +222,11 @@ module.exports = function (options) {
                 })
                 return fs.outputJson(album.filePath, album, {spaces: 2})
                   .then(function () {
-                    console.log('%s images in %s', aImages.length.toString().padStart(5), album.filePath,)
+                    console.log('%s images in %s', aImages.length.toString().padStart(5), album.filePath)
                     return {album: album, path: album.filePath, images: aImages}
                   })
               })
-
           )
-
         })
         return Q.all(aRq)
       })
