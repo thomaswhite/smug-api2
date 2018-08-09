@@ -1,5 +1,5 @@
-const creds = require('../lib/credentials.js')()
-const smug = require('../index.js')(creds)
+const creds = require('../lib/credentials.js')({username: 'stuckincustoms'})
+const smug = require('../index.js')(creds, {count: 5})
 
 smug.AlbumsAndImages()
   .then(function () {

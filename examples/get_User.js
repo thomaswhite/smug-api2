@@ -2,7 +2,7 @@ const util = require('util')
 const creds = require('../lib/credentials.js')()
 const smug = require('../index.js')(creds)
 
-smug.user()
+smug.user({username: 'stuckincustoms'})
   .then(function (data) {
     console.log(util.inspect(data, {showHidden: false, depth: null}))
   })

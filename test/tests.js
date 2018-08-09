@@ -45,7 +45,7 @@ const credentials = require('../lib/credentials.js')()
 
 describe('smug-api2 unit tests', function () {
   describe('get-api URLS', function () {
-    const API = require('../lib/get-api.js')
+    const API = require('../lib/api2.js')
 
     it('returns object', function () {
       API.should.be.an.instanceOf(Object)

@@ -1,6 +1,6 @@
 // const objectAssign = require('object-assign');
 
-module.exports = function (options) {
+module.exports = function (options, extraParameters) {
   'use strict'
 
   require('any-promise/register/q')
@@ -10,7 +10,7 @@ module.exports = function (options) {
   //  const util = require('util')
   const fs = require('fs-extra')
   const path = require('path')
-  const ApiURL = require('./lib/get-api.js')(options)
+  const API = require('./lib/api2.js')(options, extraParameters)
   const Tags = require('./lib/tags.js')
   const Images = require('./lib/images.js')
   //  const _ = require('lodash')
@@ -115,13 +115,6 @@ module.exports = function (options) {
 
   /* ======================================================== */
 
-  function SaveJSON (oData, dir, filename) {
-    const filePath = path.join(__dirname, dir, filename)
-    return fs.outputJson(filePath, oData, {spaces: 2})
-      .then(function () {
-        console.log('%s saved', filePath)
-      })
-  }
 
   function RequestSmug (RequestParameters, returnBody) {
     // resolveWithFullResponse: true
@@ -149,25 +142,26 @@ module.exports = function (options) {
   }
 
   function User (oParam, oExtraMethods, method, postPayload) {
-    return RequestSmug(ApiURL.RequestParam('User', method, oParam, oExtraMethods, postPayload))
+    return RequestSmug(API.RequestParam('User', method, oParam, oExtraMethods, postPayload))
   }
 
   function Node (oParam, oExtraMethods, method, postPayload) {
-    return RequestSmug(ApiURL.RequestParam('Node', method, oParam, oExtraMethods, postPayload))
+    return RequestSmug(API.RequestParam('Node', method, oParam, oExtraMethods, postPayload))
   }
 
   function Album (oParam, oExtraMethods, method, postPayload) {
-    return RequestSmug(ApiURL.RequestParam('Album', method, oParam, oExtraMethods, postPayload))
+    return RequestSmug(API.RequestParam('Album', method, oParam, oExtraMethods, postPayload))
   }
 
   function Image (oParam, oExtraMethods, method, postPayload) {
-    return RequestSmug(ApiURL.RequestParam('Image', method, oParam, oExtraMethods, postPayload))
+    return RequestSmug(API.RequestParam('Image', method, oParam, oExtraMethods, postPayload))
   }
 
   function AlbumsAndImages (oParam, oExtraMethods, postPayload) {
     let oImages = {IDs: {}, FileNames: {}}
     let KeyWords = {Albums: {}, Images: {}}
     let AllAlbums = {}
+    let TitlesAndDescriptions = {}
     /*
         return fs.readJson(path.join(__dirname, 'data', 'Albums.json'))
           .then(function (savedAlbum) {
@@ -176,7 +170,6 @@ module.exports = function (options) {
           .catch(function (err) {
             return null
           })
-
     */
     return User(oParam, oExtraMethods, 'Albums', postPayload)
       .then(function (aAlbums) {
@@ -211,19 +204,18 @@ module.exports = function (options) {
       .then(function (aAlbums) {
         let aRq = []
         aAlbums.forEach(function (album) {
-          album.filePath = path.join(__dirname, 'data', album.UrlPath, 'album.json')
           aRq.push(
             Album(album, {}, 'AlbumImages')
               .then(function (aImages) {
                 aImages.forEach(function (img) {
                   Images.AddAlbum(img, album)
-                  Images.Add(img, oImages)
+                  Images.Add(img, oImages, TitlesAndDescriptions)
                   Tags.AddImageTagsToAlbum(img, album, KeyWords)
                 })
-                return fs.outputJson(album.filePath, album, {spaces: 2})
-                  .then(function () {
-                    console.log('%s images in %s', aImages.length.toString().padStart(5), album.filePath)
-                    return {album: album, path: album.filePath, images: aImages}
+                return API.SaveJSON(album, album.UrlPath, 'Album.json', aImages.length.toString().padStart(5) + ' images in ')
+                  .then(function (filePath) {
+                    album.filePath = filePath
+                    return {album: album, path: filePath, images: aImages}
                   })
               })
           )
@@ -245,14 +237,13 @@ module.exports = function (options) {
       })
 
       .then(function (data) {
-        return SaveJSON(oImages, 'data', 'Images.json')
-      })
-      .then(function () {
+        let aRq = []
         Tags.OrderAlbumTags(KeyWords)
-        SaveJSON(KeyWords, 'data', 'KeyWords.json')
-      })
-      .then(function () {
-        SaveJSON(AllAlbums, 'data', 'Albums.json')
+        aRq.push(API.SaveJSON(KeyWords, '', 'KeyWords.json'))
+        aRq.push(API.SaveJSON(oImages, '', 'Images.json'))
+        aRq.push(API.SaveJSON(AllAlbums, '', 'Albums.json'))
+        aRq.push(API.SaveJSON(TitlesAndDescriptions, '', 'Titles.json'))
+        return Q.all(aRq)
       })
       .then(function () {
         console.log('AlbumsAndImages - all saved.')
