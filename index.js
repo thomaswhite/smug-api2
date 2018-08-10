@@ -13,6 +13,8 @@ module.exports = function (options, extraParameters) {
   const API = require('./lib/api2.js')(options, extraParameters)
   const Tags = require('./lib/tags.js')
   const Images = require('./lib/images.js')
+  const postcron = require('./lib/postcron.js')
+
   //  const _ = require('lodash')
   // const deepmerge = require('deepmerge')
   //  rq.debug = true
@@ -212,10 +214,18 @@ module.exports = function (options, extraParameters) {
                   Images.Add(img, oImages, TitlesAndDescriptions)
                   Tags.AddImageTagsToAlbum(img, album, KeyWords)
                 })
-                return API.SaveJSON(album, album.UrlPath, 'Album.json', aImages.length.toString().padStart(5) + ' images in ')
+                let csv = postcron.makeCSV(aImages, 2018, 8, 1, 12, 0, 24, 3, 27, '1050x1050')
+
+                return API.SaveJSON(album, album.UrlPath, 'Album.json')
                   .then(function (filePath) {
                     album.filePath = filePath
-                    return {album: album, path: filePath, images: aImages}
+                    return {album: album, path: filePath, images: aImages, csv: csv}
+                  })
+                  .then(function (data) {
+                    return API.SaveJSON(data.images, album.UrlPath, 'Images.json', '', aImages.length.toString().padStart(5) + ' images in ')
+                      .then(function () {
+                        return data
+                      })
                   })
               })
           )
