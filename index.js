@@ -13,10 +13,11 @@ module.exports = function (options, extraParameters) {
   const API = require('./lib/api2.js')(options, extraParameters)
   const TagsAPI = require('./lib/tags.js')
   const ImagesAPI = require('./lib/images.js')
+  const AlbumsAPI = require('./lib/albums.js')
   const PostcronAPI = require('./lib/postcron.js')
 
   //  const _ = require('lodash')
-  // const deepmerge = require('deepmerge')
+  const deepmerge = require('deepmerge')
   //  rq.debug = true
 
   let config = {
@@ -159,125 +160,7 @@ module.exports = function (options, extraParameters) {
   }
 
   function AlbumsAndImages (oParam, oExtraMethods, postPayload) {
-    let oImages = {IDs: {}, FileNames: {}}
-    let KeyWords = {Albums: {}, Images: {}}
-    let AllAlbums = {}
-    let TitlesAndDescriptions = {}
-    /*
-        return fs.readJson(path.join(__dirname, 'data', 'Albums.json'))
-          .then(function (savedAlbum) {
-            return savedAlbum
-          })
-          .catch(function (err) {
-            return null
-          })
-    */
     return User(oParam, oExtraMethods, 'Albums', postPayload)
-      .then(function (aAlbums) {
-        aAlbums.forEach(function (album) {
-          TagsAPI.AddAlbumTags(album, KeyWords)
-          AllAlbums[album.AlbumKey] = album
-        })
-        return aAlbums
-      })
-
-      /*
-            .then(function (aAlbums) {
-            let aRq = []
-            aAlbums.forEach(function (fresh_album) {
-              fresh_album.Images = {}
-              fresh_album.filePath = path.join(__dirname, 'data', fresh_album.UrlPath, 'album.json')
-              return fs.readJson( fresh_album.filePath)
-                .then(function (savedAlbum) {
-                  return {fresh: fresh_album, saved: savedAlbum}
-                })
-                .catch(function (err) {
-                  return {fresh: fresh_album}
-                })
-                .then(function ( fresh_and_saved ) {
-                  let album = fresh_and_saved.fresh
-                  aRq.push(
-                    Album(album, {}, 'AlbumImages')
-                      .then(function (aImages) {
-                        aImages.forEach(function (img) {
-       */
-
-      .then(function (aAlbums) {
-        let aRq = []
-        aAlbums.forEach(function (album) {
-          aRq.push(
-            Album(album, {}, 'AlbumImages')
-              .then(function (aImages) {
-                aImages.forEach(function (img) {
-                  ImagesAPI.AddAlbum(img, album)
-                  ImagesAPI.Add(img, oImages, TitlesAndDescriptions)
-                  TagsAPI.AddImageTagsToAlbum(img, album, KeyWords)
-                })
-                let csv = PostcronAPI.makeCSV(aImages, 2018, 8, 1, 12, 0, 24, 3, 27, '1050x1050')
-
-                return API.SaveJSON(album, album.UrlPath, 'Album.json')
-                  .then(function (filePath) {
-                    album.filePath = filePath
-                    return {album: album, path: filePath, images: aImages, csv: csv}
-                  })
-                  .then(function (data) {
-                    return API.SaveJSON(data.images, album.UrlPath, 'Images.json', '', aImages.length.toString().padStart(5) + ' images in ')
-                      .then(function () {
-                        return data
-                      })
-                  })
-              })
-          )
-        })
-        return Q.all(aRq)
-      })
-
-      .then(function (data) {
-        let aRq = []
-        data.forEach(function (AlbumData) {
-          AlbumData.images.forEach(function (img) {
-            // add image
-            // process image tags
-            // process folder tags
-          })
-          // save album
-        })
-        return data
-      })
-
-      .then(function (data) {
-        let aRq = []
-        TagsAPI.OrderAlbumTags(KeyWords)
-        aRq.push(API.SaveJSON(KeyWords, '', 'KeyWords.json'))
-        aRq.push(API.SaveJSON(oImages, '', 'Images.json'))
-        aRq.push(API.SaveJSON(AllAlbums, '', 'Albums.json'))
-        aRq.push(API.SaveJSON(TitlesAndDescriptions, '', 'Titles.json'))
-        return Q.all(aRq)
-      })
-      .then(function () {
-        console.log('AlbumsAndImages - all saved.')
-      })
-
-      .catch(function (err) {
-        throw err
-      })
-  }
-
-  function AlbumsAndImages2 (oParam, oExtraMethods, postPayload) {
-    let oImages = {IDs: {}, FileNames: {}}
-    let KeyWords = {Albums: {}, Images: {}}
-    let AllAlbums = {}
-    let TitlesAndDescriptions = {}
-
-    return User(oParam, oExtraMethods, 'Albums', postPayload)
-      .then(function (aAlbums) {
-        aAlbums.forEach(function (album) {
-          TagsAPI.AddAlbumTags(album, KeyWords)
-          AllAlbums[album.AlbumKey] = album
-        })
-        return aAlbums
-      })
-
       .then(function (aAlbums) {
         let aRq = []
         aAlbums.forEach(function (album) {
@@ -293,52 +176,69 @@ module.exports = function (options, extraParameters) {
 
       .then(function (AllAlbumsAndImages) {
         let aRq = []
-        AllAlbumsAndImages.forEach(function (AlbumData) {
-          // album
-          // AlbumData.album
-
-          // images
-          AlbumData.images.forEach(function (img) {
-            // add image
-            // process image tags
-            // process folder tags
+        AllAlbumsAndImages.forEach(function (Data) {
+          Data.tags = {}
+          Data.titles = {}
+          TagsAPI.AlbumAdd(Data.album, Data.tags)
+          Data.images.forEach(function (img) {
+            ImagesAPI.AlbumAdd(img, Data.album)
+            ImagesAPI.TitlesAndDescriptions(img, Data.titles)
+            AlbumsAPI.ImageAdd(img, Data.album)
+            TagsAPI.ImageToAlbumAdd(img, Data.album, Data.tags)
           })
+          Data.postcron = PostcronAPI.makeCSV(Data.images, 2018, 8, 1, 12, 0, 24, 3, 27, '1050x1050')
 
-          // tags
-          // csv
-          // save album
+          // return album, images, album tags, image tags, postcron
 
-          // return album, images, album tags, image tags, csv
-
-          aRq.push(API.SaveJSON(AlbumData.album, album.UrlPath, 'Album.json'))
-          aRq.push(API.SaveJSON(AlbumData.images, album.UrlPath, 'Images.json', '', aImages.length.toString().padStart(5) + ' images in '))
-
-          return API.SaveJSON(album, album.UrlPath, 'Album.json')
-            .then(function (filePath) {
-              album.filePath = filePath
-              return {album: album, path: filePath, images: aImages, csv: csv}
-            })
-            .then(function (data) {
-              return API.SaveJSON(data.images, album.UrlPath, 'Images.json', '', aImages.length.toString().padStart(5) + ' images in ')
-                .then(function () {
-                  return data
-                })
-            })
+          aRq.push(
+            API.SaveJSON(Data.album, Data.album.UrlPath, 'Album.json')
+              .then(function () { return Data })
+              .then(function (data) {
+                return API.SaveJSON(Data.images, data.album.UrlPath, 'Images.json', '', data.images.length.toString().padStart(5) + ' images')
+                  .then(function () { return data })
+              })
+              .then(function (data) {
+                return API.SaveJSON(Data.postcron, data.album.UrlPath, 'Postcron.json').then(function () { return data })
+              })
+              .then(function (data) {
+                return API.SaveJSON(Data.tags, data.album.UrlPath, 'Tags.json').then(function () { return data })
+              })
+              .then(function (data) {
+                return API.SaveJSON(Data.titles, data.album.UrlPath, 'Titles.json').then(function () { return data })
+              })
+          )
         })
         return Q.all(aRq)
-
       })
 
       .then(function (data) {
+        let All = {
+          Tags: {},
+          Images: {},
+          Albums: {},
+          Titles: {}
+        }
+
+        data.forEach(function (Data) {
+          All.Tags = deepmerge(All.Tags, Data.tags)
+          All.Titles = deepmerge(All.Titles, Data.titles)
+
+          Data.images.forEach(function (img) {
+            ImagesAPI.Add(img, All.Images)
+          })
+
+          All.Albums[Data.album.AlbumKey] = Data.album
+        })
+
         let aRq = []
-        TagsAPI.OrderAlbumTags(KeyWords)
-        aRq.push(API.SaveJSON(KeyWords, '', 'KeyWords.json'))
-        aRq.push(API.SaveJSON(oImages, '', 'Images.json'))
-        aRq.push(API.SaveJSON(AllAlbums, '', 'Albums.json'))
-        aRq.push(API.SaveJSON(TitlesAndDescriptions, '', 'Titles.json'))
+        // TagsAPI.OrderAlbumTags(All.Tags)
+        aRq.push(API.SaveJSON(All.Tags, '', 'Tags.json'))
+        aRq.push(API.SaveJSON(All.Images, '', 'Images.json'))
+        aRq.push(API.SaveJSON(All.Albums, '', 'Albums.json'))
+        aRq.push(API.SaveJSON(All.Titles, '', 'Titles.json'))
         return Q.all(aRq)
       })
-      .then(function () {
+      .then(function (data) {
         console.log('AlbumsAndImages - all saved.')
       })
 
@@ -354,7 +254,6 @@ module.exports = function (options, extraParameters) {
     node: Node,
     album: Album,
     image: Image,
-    AlbumsAndImages: AlbumsAndImages,
-    AlbumsAndImages2: AlbumsAndImages2
+    AlbumsAndImages: AlbumsAndImages
   }
 }
