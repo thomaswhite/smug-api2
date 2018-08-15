@@ -42,82 +42,6 @@ module.exports = function (options, extraParameters) {
     return Object.keys(obj).length > 0
   }
 
-  function makeRequestOptions (base, params) {
-    const apiKey = {APIKey: config.app_key}
-
-    let url
-    let queryParamas = Object.assign({}, apiKey, Parameters, params)
-
-    switch (base) {
-      case 'get-api':
-        url = rootURL + '/api/v2'
-        queryParamas = Object.assign({}, apiKey, params)
-        break
-      case 'connect':
-        url = rootURL + API.urls.UserBase
-        queryParamas = Object.assign({}, apiKey, params)
-        break
-      case '':
-        url = config.UserBase
-        break
-    }
-
-    return {
-      uri: url,
-      qs: queryParamas,
-      headers: Headers,
-      json: true
-    }
-  }
-
-  function getAPI (options) {
-    return rq(makeRequestOptions('get-api', Object.assign({}, options))) // , ,  {_filteruri:'AlbumBase'}
-      .then(function (body) {
-        if (options && options.raw === true) {
-          return body.Response
-        } else {
-          const URLs = body.Response.Uris
-          for (let i in URLs) {
-            api[i] = URLs[i].Uri
-          }
-          return api
-        }
-      })
-      .then(function (URLs) {
-        if (options && options.save === true) {
-          const FilePath = path.join(__dirname, 'lib/api-urls.json')
-          fs.outputJson(FilePath, URLs)
-            .then(function () {
-              console.info(FilePath + ' has been saved')
-            })
-            .catch(function (err) {
-              throw err
-            })
-
-          fs.writeFileSync(path.join(__dirname, 'lib/api-urls.json'), JSON.stringify(URLs, null, 2), 'utf-8')
-        }
-        return URLs
-      })
-      .catch(function (err) {
-        throw err
-      })
-  }
-
-  function connect (options) {
-    return rq(makeRequestOptions('connect', Object.assign({}, {_filter: 'EndpointType', _filteruri: ''}, options)))
-      .then(function (body) {
-        //        console.log(body.Code)
-        // console.log( util.inspect(body, {showHidden: false, depth: null})  );
-
-        return body.Response
-      })
-      .catch(function (err) {
-        throw err
-      })
-  }
-
-  /* ======================================================== */
-
   function RequestSmug (RequestParameters, returnBody) {
     // resolveWithFullResponse: true
     // simple: false
@@ -167,6 +91,7 @@ module.exports = function (options, extraParameters) {
           aRq.push(
             Album(album, {}, 'AlbumImages')
               .then(function (aImages) {
+                console.log('Downloaded %d5 images in %s', aImages.length, album.UrlPath)
                 return {album: album, images: aImages}
               })
           )
@@ -248,8 +173,6 @@ module.exports = function (options, extraParameters) {
   }
 
   return {
-    getAPI: getAPI,
-    connect: connect,
     user: User,
     node: Node,
     album: Album,
