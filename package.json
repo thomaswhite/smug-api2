@@ -37,8 +37,6 @@
   "devDependencies": {
     "assert": "^1.4.1",
     "code": "^5.2.0",
-    "lab": "^15.5.0",
-    "should": "^13.2.1",
     "standard": "^11.0.1",
     "tape": "^4.9.0",
     "vow": "^0.4.17",

@@ -1,5 +1,5 @@
 const creds = require('../lib/credentials.js')()
-const smug = require('../index.js')(creds, {count: 3})
+const smug = require('../index.js')(creds, {count: 2})
 
 smug.user({}, {_filter: 'AlbumKey,UrlPath'}, 'Albums') // , _filteruri: null,  _filter: null
   .then(function (data) {
