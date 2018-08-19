@@ -1,28 +1,24 @@
-const vows = require('vows'),
-  assert = require('assert'),
-//  API = require('../lib/api2.js'),
-//  creds = require('../lib/credentials.js')(),
-  limit = 2
+const vows = require('vows')
+const assert = require('assert')
+const limit = 2
 
-function getFirst (A) {
-  return function (A) {
-    return A[0]
-  }
-}
-
-vows.describe('SmugMug API 2')
+vows.describe('User Albums')
   .addBatch({
-    'When we create smugmug object': {
+    'When we get User': {
       topic: function () {
         const creds = require('../lib/credentials.js')() // {username: 'stuckincustoms'}
-        return require('../index.js')(creds, {count: 2})
+        const smug = require('../index.js')(creds, {count: limit})
+        const that = this
+        smug.user('User', {}, {}) //  filter: 'AlbumKey,UrlPath'
+          .then(function (data) { that.callback(null, data, smug) })
+          .catch(function (err) { that.callback(err, null) })
       },
-      'we expect an object': function (topic) { assert.isObject(topic) },
-      'we expect property user': function (topic) { assert.include(topic, 'user') },
-      'we expect property node': function (topic) { assert.include(topic, 'node') },
-      'we expect property album': function (topic) { assert.include(topic, 'album') },
-      'we expect property image': function (topic) { assert.include(topic, 'image') },
-      'we expect property AlbumsAndImages': function (topic) { assert.include(topic, 'AlbumsAndImages') },
+      'we do not expect error': function (err, User) { assert.isNull(err) },
+      'we expect property NickName': function (User) { assert.include(User, 'NickName') },
+      'we expect property Name': function (User) { assert.include(User, 'Name') },
+      'we expect property Uri': function (User) { assert.include(User, 'Uri') },
+      'we expect property WebUri': function (User) { assert.include(User, 'WebUri') },
+      'we expect property NodeID': function (User) { assert.include(User, 'NodeID') }
     }
   })
 
@@ -32,11 +28,11 @@ vows.describe('SmugMug API 2')
         const creds = require('../lib/credentials.js')() // {username: 'stuckincustoms'}
         const smug = require('../index.js')(creds, {count: limit})
         const that = this
-        smug.user({}, {}, 'Albums') //_filter: 'AlbumKey,UrlPath'
+        smug.user('Albums', {}, {}) // _filter: 'AlbumKey,UrlPath'
           .then(function (data) { that.callback(null, data, smug) })
           .catch(function (err) { that.callback(err, null) })
       },
-      'we do not expect error': function (err) { assert.isNull(err) },
+      'we do not expect error': function (err, aAlbums) { assert.isNull(err) },
       'we expect an array': function (err, aAlbums) { assert.isArray(aAlbums) },
       'we expect only limited number of albums': function (err, aAlbums) {
         assert.lengthOf(aAlbums, limit)
@@ -56,7 +52,7 @@ vows.describe('SmugMug API 2')
         'we expect property LastUpdated': function (album) { assert.include(album, 'LastUpdated') },
         'we expect property NodeID': function (album) { assert.include(album, 'NodeID') },
         'we expect property AlbumKey': function (album) { assert.include(album, 'AlbumKey') },
-//        'we expect property SortIndex': function (album) { assert.include(album, 'SortIndex') },
+        //        'we expect property SortIndex': function (album) { assert.include(album, 'SortIndex') },
         //       'we expect property Type': function (album) { assert.include(album, 'Type') },
         'we expect property ImageCount': function (album) { assert.include(album, 'ImageCount') },
         'we expect property SortMethod': function (album) { assert.include(album, 'SortMethod') },
@@ -67,11 +63,14 @@ vows.describe('SmugMug API 2')
       'AND when we fetch the images of the first album': {
         topic: function (aAlbums, smug) {
           let that = this
-          smug.album(aAlbums[0], {}, 'AlbumImages')
+          smug.album('AlbumImages', aAlbums[0], {})
             .then(function (aImages) { that.callback(null, aImages) })
-            .catch(function (err) { that.callback(err, null) })
+            .catch(function (err) {
+              process.stderr.write('Unexpected error', err)
+              that.callback(err, null)
+            })
         },
-        'we do not expect error': function (err) { assert.isNull(err) },
+        'we do not expect error': function (err, aImages) { assert.isNull(err) },
         'we expected an array of images': function (err, aImages) { assert.isArray(aImages) },
         'we expect only limited number of images': function (err, aImages) { assert.lengthOf(aImages, limit) },
         'AND when we check the first image': {

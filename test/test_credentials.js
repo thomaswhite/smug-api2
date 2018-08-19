@@ -1,10 +1,10 @@
-const vows = require('vows'),
-  assert = require('assert')
+const vows = require('vows')
+const assert = require('assert')
 // API = require('../lib/api2.js'),
 // creds = require('../lib/credentials.js')()
 //  , smug = require('../index.js')(creds)
 
-vows.describe('Module credentials.js')
+vows.describe('Module test_credentials.js')
   .addBatch({
     'When we get credentials': {
       topic: function () {

@@ -1,10 +1,10 @@
-const creds = require('../lib/credentials.js')()
-const smug = require('../index.js')(creds)
+//const creds = require('../lib/credentials.js')()
+//  const smug = require('../index.js')(creds)
 
 const path = require('path')
 const fs = require('fs-extra')
 /*
-smug.user({}, {}, 'AlbumsTimeStamps') // , _filteruri: null,  _filter: null
+smug.user('AlbumsTimeStamps', {}, {}) // , _filteruri: null,  _filter: null
   .then(function (data) {
     console.log(data)
     data.forEach(function (o) {
@@ -31,8 +31,8 @@ fs.readJson(sAlbumsPath)
     return null
   })
   .then(function (savedAlbums) {
-    return
-    smug.user({}, {}, savedAlbums ? 'AlbumsTimeStamps' : 'Albums')
+    return savedAlbums
+    //  smug.user(savedAlbums ? 'AlbumsTimeStamps' : 'Albums', {}, {})
   })
 
   .then(function (freshAlbums) {
@@ -41,19 +41,18 @@ fs.readJson(sAlbumsPath)
     } else {
       let ToFetch = []
       freshAlbums.forEach(function (album) {
-          let add = false
-          let saved = oSaved[album.AlbumKey]
-          if (saved.LastUpdated != album.LastUpdated) {
-            album._fetchAlbum = true
-            add = true
-          }
-          if (saved.ImagesLastUpdated != album.ImagesLastUpdated) {
-            album._fetchImages = true
-            add = true
-          }
-          if (add) { ToFetch.push(album)}
+        let add = false
+        let saved = oSaved[album.AlbumKey]
+        if (saved.LastUpdated !== album.LastUpdated) {
+          album._fetchAlbum = true
+          add = true
         }
-      )
+        if (saved.ImagesLastUpdated !== album.ImagesLastUpdated) {
+          album._fetchImages = true
+          add = true
+        }
+        if (add) { ToFetch.push(album) }
+      })
       return ToFetch
     }
   })
@@ -64,4 +63,3 @@ fs.readJson(sAlbumsPath)
   .catch(function (err) {
     console.log(err)
   })
-

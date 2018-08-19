@@ -12,35 +12,42 @@ module.exports = function (options, extraParameters) {
   const ProcessData = require('./lib/process-data.js')
 
   //  const _ = require('lodash')
-//  const deepmerge = require('deepmerge')
+  //  const deepmerge = require('deepmerge')
   //  rq.debug = true
 
-//  function isNotObject (obj) {     return Object.keys(obj).length > 0   }
+  //  function isNotObject (obj) {     return Object.keys(obj).length > 0   }
 
-  function User (oParam, oExtraMethods, method, postPayload) {
+  function User (method, oParam, oExtraMethods, postPayload) {
     return API.Request(API.RequestParam('User', method, oParam, oExtraMethods, postPayload))
+      .then(function (Data) {
+        if (method === 'User') {
+          Data.NodeID = Data.Uris.Node.Uri.split('/')[4]
+          delete Data.Uris
+        }
+        return Data
+      })
   }
 
-  function Node (oParam, oExtraMethods, method, postPayload) {
+  function Node (method, oParam, oExtraMethods, postPayload) {
     return API.Request(API.RequestParam('Node', method, oParam, oExtraMethods, postPayload))
   }
 
-  function Album (oParam, oExtraMethods, method, postPayload) {
+  function Album (method, oParam, oExtraMethods, postPayload) {
     return API.Request(API.RequestParam('Album', method, oParam, oExtraMethods, postPayload))
   }
 
-  function Image (oParam, oExtraMethods, method, postPayload) {
+  function Image (method, oParam, oExtraMethods, postPayload) {
     return API.Request(API.RequestParam('Image', method, oParam, oExtraMethods, postPayload))
   }
 
   function AlbumsAndImages (oParam, oExtraMethods, postPayload) {
-    return User(oParam, oExtraMethods, 'Albums', postPayload)
+    return User('Albums', oParam, oExtraMethods, postPayload)
       .then(function (aAlbums) {
         let aRq = []
         console.log('%s albums fetched', aAlbums.length.toString().padEnd(5))
         aAlbums.forEach(function (album) {
           aRq.push(
-            Album(album, {}, 'AlbumImages')
+            Album('AlbumImages', album)
               .then(function (aImages) {
                 console.log('%s images fetched in %s', aImages.length.toString().padEnd(5), album.UrlPath)
                 return {album: album, images: aImages}
